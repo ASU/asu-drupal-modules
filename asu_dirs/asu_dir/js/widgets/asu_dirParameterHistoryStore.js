@@ -185,9 +185,9 @@
 
                     //only save the new state if it's different from the current state
                     if (state.data.params === undefined) {
-                        history.replaceState({params: this.hash}, document.title, '/' + this.page_alias + '?' + url_hash);
+                        history.replaceState({params: this.hash}, null, '/' + this.page_alias + '?' + url_hash);
                     } else if (state.data.params != this.hash && this.hash) {
-                        history.pushState({params: this.hash}, document.title, '/' + this.page_alias + '?' + url_hash);
+                        history.pushState({params: this.hash}, null, '/' + this.page_alias + '?' + url_hash);
                     }
                 }
             },
