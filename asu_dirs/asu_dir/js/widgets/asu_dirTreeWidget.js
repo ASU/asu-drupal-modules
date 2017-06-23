@@ -16,11 +16,11 @@
             AjaxSolr.extend(this, {
                 target: null,
                 tree: null,
-                fieldConfigs: null,
-                topLevelIds: null,
-                fieldId: null,
-                fidNum: null,
-                savedDeptId: null
+                field_configs: null,
+                top_level_ids: null,
+                field_id: null,
+                id_num: null,
+                saved_dept_id: null
             }, attributes);
         },
 
@@ -28,12 +28,14 @@
             var self = this;
             var treediv = $(this.target);
             var tree = this.tree;
-            var fieldConfigs = this.fieldConfigs;
+            var field_configs = this.field_configs;
+            var hash = this.hash;
             var dept_nids = [];
-            var fieldId = this.fieldId;
-            var fidNum = this.fidNum;
-            var savedDeptId = this.savedDeptId;
-            var topLevelIds = this.topLevelIds;
+            var top_ids = this.top_level_ids;
+            var field_id = this.field_id;
+            var id_num = this.id_num;
+            var saved_dept_id = this.saved_dept_id;
+            var top_level_ids = field_configs.top_level_ids;
 
             // Build Department Hierarchy tree list for display in block
             treediv.tree({
@@ -59,17 +61,17 @@
             treediv.bind('tree.click', function (event) {
 
                 //if the tree node is already highlighted, or is the very top dept, don't do anything
-                if (event.node.dept_id == topLevelIds.top_level_psid || event.node.dept_nid == ASUPeople[fieldId].dept_nid) {
+                if (event.node.dept_id == top_ids.top_level_psid || event.node.dept_nid == ASUPeople[field_id].dept_nid) {
                     return false;
                 }
 
                 //set global dept nid to the tree node's nid
-                ASUPeople[fieldId].dept_nid = event.node.dept_nid;
-                ASUPeople[fieldId].dept_id = event.node.dept_id;
+                ASUPeople[field_id].dept_nid = event.node.dept_nid;
+                ASUPeople[field_id].dept_id = event.node.dept_id;
 
                 //if showing people in sub-departments, get sub-departments and do request
-                if (fieldConfigs.sub_toggle === true) {
-                    dept_nids = asu_dir_get_tree_ids(asu_dir_ajax_solr_find_root(tree, ASUPeople[fieldId].dept_nid));
+                if (field_configs.sub_toggle === true) {
+                    dept_nids = asu_dir_get_tree_ids(asu_dir_ajax_solr_find_root(tree, ASUPeople[field_id].dept_nid));
                 } else {
                     dept_nids = [event.node.dept_nid];
                 }
@@ -88,9 +90,9 @@
 
 
             //set up breadcrumb functionality, if configured
-            if (fieldConfigs.show_breadcrumbs) {
+            if (field_configs.show_breadcrumbs) {
 
-                var crumb_element = $('.asu-dir-breadcrumb' + fidNum);
+                var crumb_element = $('.asu-dir-breadcrumb' + id_num);
 
                 treediv.bind(
                     'tree.select',
@@ -112,7 +114,7 @@
             }
 
             //Accessibility Settings
-            var accessLinks = $(this.target + ' .jqtree_common');
+            var access_links = $(this.target + ' .jqtree_common');
 
             var pluses = treediv.find('.glyphicon-plus-sign');
             var mp = treediv.find('.fa-circle');
@@ -126,7 +128,7 @@
                 parents.find("span.glyphicon-minus-sign").focus();
             });
 
-            accessLinks.on('keydown', function (event) {
+            access_links.on('keydown', function (event) {
                 if (event.which == 13) {
                     var parent = $(this).parents().eq(0);
                     parent.click();
@@ -145,17 +147,16 @@
             // If initial load, load the state from the URL.
             var url = state.cleanUrl, index = url.indexOf("?");// ASU edit.
 
-            if (index != -1 && ASUPeople.active == fieldId) {
+            if (index != -1 && ASUPeople.active == field_id) {
                 //get the query string from URL
                 var query_string = url.substr(index + 1);
                 var re = /query=/gi;
                 query_string = query_string.replace(re, 'q=');
-
-                asu_dir_selectNode(tree, query_string, fidNum);
+                asu_dir_selectNode(tree, query_string, id_num);
             } else {
                 //If previous department was saved, open tree to that dept.
-                if (savedDeptId != '' && savedDeptId != topLevelIds.top_level_psid && fieldConfigs.show_tree) {
-                    var node = treediv.tree('getNodeById', savedDeptId);
+                if (saved_dept_id != '' && saved_dept_id != top_level_ids.top_level_psid && field_configs.show_tree) {
+                    var node = treediv.tree('getNodeById', saved_dept_id);
                     treediv.tree('selectNode', node, true);
                 }
             }

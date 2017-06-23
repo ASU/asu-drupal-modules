@@ -18,16 +18,16 @@ var ASUPeople = {};
 
             var directories = $('.field-type-asu-directory');
             var tabs = null;
-            var hasTabs = false;
-            var tabContainId = '';
-            var tabLinks = [];
+            var has_tabs = false;
+            var tab_contain_id = '';
+            var tab_links = [];
             var tabsIDs = null;
             var universalCheck = $('.asu-dir-universal-filters').length > 0;
 
             // reset the ASUPeople global whenever reloading js, because it can cause weirdness with panels IPE
             ASUPeople = {};
             ASUPeople.man_array = [];
-            ASUPeople.tab_list = {};
+            ASUPeople.tab_list = [];
 
             // figure out if there are asu_dir tabbed panels
             if (Drupal.settings.websparkPanelsTabs != null) {
@@ -39,10 +39,10 @@ var ASUPeople = {};
             if (tabsIDs != null) {
                 for (var key in tabsIDs) {
                     if ($('#' + tabsIDs[key] + ' .field-type-asu-directory').length > 0) {
-                        hasTabs = true;
-                        tabContainId = tabsIDs[key];
-                        tabLinks = $('#' + tabContainId + ' .item-list a');
-                        tabs = $('#' + tabContainId + ' .field-type-asu-directory');
+                        has_tabs = true;
+                        tab_contain_id = tabsIDs[key];
+                        tab_links = $('#' + tab_contain_id + ' .item-list a');
+                        tabs = $('#' + tab_contain_id + ' .field-type-asu-directory');
                         break;
                     }
                 }
@@ -50,33 +50,31 @@ var ASUPeople = {};
 
             for (var i = 0; i < directories.length; i++) {
 
-                var fieldId = directories[i].id;
-                ASUPeople[fieldId] = {};
-                ASUPeople[fieldId].dept_nid = 0;
-                ASUPeople[fieldId].dept_id = '';
+                var field_id = directories[i].id;
+                ASUPeople[field_id] = {};
+                ASUPeople[field_id].dept_nid = 0;
+                ASUPeople[field_id].dept_id = '';
                 var tab_pane = null;
-                var tabPaneId = '';
+                var tab_pane_id = '';
+                var tab_link = '';
 
                 // todo: pass in the universal search box ID
                 var universalSearchBoxId = '#asu-dir-ajax-solr-search-universal';
 
                 // the real tab num is the index of the asu_dir tab in the tab nav set
-                // the dirTabNum keeps track of where the current asu_dir is being placed in the
+                // the dir_tabnum keeps track of where the current asu_dir is being placed in the
                 // tab links array
                 var realtabnum = 0;
-                var dirTabNum = 0;
+                var dir_tabnum = 0;
 
+                if (has_tabs) {
 
-                // configure the tab properties of the directory tab pane, to allow
-                // for keeping of state between directory panes
-                if (hasTabs) {
+                    for (var j = 0; j < tab_links.length; j++) {
 
-                    for (var j = 0; j < tabLinks.length; j++) {
-
-                        var tab = tabLinks.eq(j);
+                        var tab = tab_links.eq(j);
                         var theid = tab.attr('href');
 
-                        var found = $(theid).find('#' + fieldId);
+                        var found = $(theid).find('#' + field_id);
 
                         if (found.length > 0) {
                             realtabnum = j;
@@ -84,46 +82,39 @@ var ASUPeople = {};
                             // look for view in pane, and add class if so
                             var is_view = $(theid).find('.view');
                             if (is_view.length > 0) {
-                                if (!tabLinks.eq(j).hasClass('asu_isearch_view_tab')) {
-                                    tabLinks.eq(j).addClass('asu_isearch_view_tab')
+                                if (!tab_links.eq(j).hasClass('asu_isearch_view_tab')) {
+                                    tab_links.eq(j).addClass('asu_isearch_view_tab')
                                 }
                             }
                         }
                     }
 
-                    tabPaneId = tabLinks.eq(realtabnum).attr('href');
+                    tab_pane_id = tab_links.eq(realtabnum).attr('href');
 
-
-                    // save pane to global tab_list object
-                    ASUPeople.tab_list[fieldId] = {};
-                    ASUPeople.tab_list[fieldId].realTabNum = realtabnum;
-
-                    // set dirTabnum to the real tab index within the jquery ui tab set
-                    dirTabNum = realtabnum;
+                    ASUPeople.tab_list[i] = {};
+                    ASUPeople.tab_list[i].field_id = field_id;
+                    ASUPeople.tab_list[i].tab_pane = tab_pane;
+                    ASUPeople.tab_list[i].tab_pane_id = tab_pane_id;
+                    //ASUPeople.tab_list[i].tab_link = tab_link;
+                    dir_tabnum = i;
                 }
 
-                if (settings.hasOwnProperty(fieldId)) {
-                    var isettings = settings[fieldId];
+                if (settings.hasOwnProperty(field_id)) {
+                    var isettings = settings[field_id];
 
-                    // get the configs passed in by Drupal
-                    var topLevelIds = isettings.topLevelIds;
-                    var fieldConfigs = isettings.fieldConfigs;
-                    ASUPeople[fieldId].fieldConfigs = fieldConfigs;
-
-                    // array of all saved dept nids
-                    var savedDeptNids = isettings.deptNids;
-
-                    // id of top level configured department
+                    //get the configs passed in by Drupal
+                    var topLevelIds = isettings.top_level_ids;
+                    var fieldConfigs = isettings.field_configs;
+                    ASUPeople[field_id].field_configs = fieldConfigs;
+                    var savedDeptNids = isettings.dept_nids;
                     var savedDeptId = fieldConfigs.dept_id;
-
-                    var solrServer = isettings.solrServer;
-                    var pageAlias = isettings.pageAlias;
-
-                    // this is the ASU Directory field id number from Drupa
-                    var fidNum = fieldConfigs.pane_id;
+                    var solrServer = isettings.solr_server;
+                    var pageAlias = isettings.page_alias;
+                    var iSearchMode = fieldConfigs.isearch_flag;
+                    var idNum = fieldConfigs.pane_id;
                     var resPerPage = 10;
-                    var localPeople = isettings.localPeople;
-                    var iSearchUrl = isettings.iSearchUrl;
+                    var localPeople = isettings.local_people;
+                    var iSearchUrl = isettings.isearch_url;
                     var filters = [];
                     var depts = fieldConfigs.depts.items;
 
@@ -132,8 +123,8 @@ var ASUPeople = {};
                     if (fieldConfigs.pager_display == 'paged' && fieldConfigs.pager_items_per_page != 0) {
                         resPerPage = fieldConfigs.pager_items_per_page;
 
-                    // if we want to show all results, then we set the 'rows' parameter to 200000,
-                    // since that is the maximum request size we will want.
+                        // if we want to show all results, then we set the 'rows' parameter to 200000,
+                        // since that is the maximum request size we will want.
                     } else if (fieldConfigs.pager_display == 'all' || fieldConfigs.pager_items_per_page == 0) {
                         resPerPage = 200000;
                     }
@@ -141,16 +132,16 @@ var ASUPeople = {};
                     // Build the pre-configured filter values, and store them in the fieldConfigs
                     // ADD FILTERING FOR TENURE OR NON-TENURE FACULTY TITLES, IF APPLICABLE
                     if (fieldConfigs.tenure_display && fieldConfigs.faculty_titles != null && fieldConfigs.tenure_display != 'Both') {
-                        var facTitles = fieldConfigs.faculty_titles.titles;
+                        var fac_titles = fieldConfigs.faculty_titles.titles;
                         var filtered = [];
-                        var titleSearch = '';
+                        var title_search = '';
 
                         if (fieldConfigs.tenure_display == 'Tenure') {
-                            filtered = facTitles.filter(function (element, index, array) {
+                            filtered = fac_titles.filter(function (element, index, array) {
                                 return (element.tenure === 1);
                             });
                         } else {
-                            filtered = facTitles.filter(function (element, index, array) {
+                            filtered = fac_titles.filter(function (element, index, array) {
                                 return (element.tenure === 0);
                             });
                         }
@@ -159,10 +150,10 @@ var ASUPeople = {};
                             return e.name;
                         });
 
-                        titleSearch += asu_dir_solr_search_string(filtered, 'facultyTitlesFacet', true);
+                        title_search += asu_dir_solr_search_string(filtered, 'facultyTitlesFacet', true);
 
-                        fieldConfigs.ft_filter = titleSearch;
-                        filters.push(titleSearch);
+                        fieldConfigs.ft_filter = title_search;
+                        filters.push(title_search);
                     }
 
 
@@ -174,8 +165,8 @@ var ASUPeople = {};
                     resPerPage = parseInt(resPerPage);
 
                     //create the dept. tree from the root dept
-                    ASUPeople[fieldId].dept_nid = savedDeptNids[0];
-                    var topNid = savedDeptNids[0];
+                    ASUPeople[field_id].dept_nid = savedDeptNids[0];
+                    var top_nid = savedDeptNids[0];
                     var tree = [];
 
                     // Add widget instances for each facet.
@@ -184,7 +175,7 @@ var ASUPeople = {};
                     var fields = ['expertiseAreasFacet', 'facultyTitlesFacet'];
 
                     //these are fields which will override the manager sort, and also the alpha filter widget
-                    var overrideFields = ['lastName', 'primaryTitle', 'expertiseAreasFacet', 'facultyTitlesFacet'];
+                    var override_fields = ['lastName', 'primaryTitle', 'expertiseAreasFacet', 'facultyTitlesFacet'];
 
                     if (isettings.hasOwnProperty('tree') && isettings.tree.constructor != Array) {
                         tree = JSON.parse(isettings.tree);
@@ -193,7 +184,7 @@ var ASUPeople = {};
                     }
 
                     //stick with entire tree if top nid is not defined
-                    if (topNid != null && tree) {
+                    if (top_nid != null && tree) {
 
                         var ttree = [];
 
@@ -209,17 +200,17 @@ var ASUPeople = {};
                     //Configure AjaxSolr
                     Manager = new AjaxSolr.asu_dirManager({
                         solrUrl: solrServer,
-                        fieldConfigs: fieldConfigs,
-                        overrideFields: overrideFields,
-                        fieldId: fieldId,
-                        perPage: resPerPage,
-                        localPeople: localPeople
+                        field_configs: fieldConfigs,
+                        override_fields: override_fields,
+                        field_id: field_id,
+                        per_page: resPerPage,
+                        local_people: localPeople
                     });
 
                     // Add in stock pager widget.
                     Manager.addWidget(new AjaxSolr.asu_dirPagerWidget({
                         id: 'pager',
-                        target: '#asu-dir-ajax-solr-pager' + fidNum,
+                        target: '#asu-dir-ajax-solr-pager' + idNum,
                         prevLabel: '<i class="fa fa-angle-double-left"></i><span class="asu-dir-hidden">Previous</span>',
                         nextLabel: '<i class="fa fa-angle-double-right"></i><span class="asu-dir-hidden">Next</span>',
                         innerWindow: 1,
@@ -227,45 +218,44 @@ var ASUPeople = {};
                             $('#pager-header').html($('<span></span>').text('displaying ' + Math.min(total, offset + 1) + ' to ' + Math.min(total, offset + perPage) + ' of ' + total));
                         },
                         per_page: resPerPage,
-                        fieldConfigs: fieldConfigs
+                        field_configs: fieldConfigs
                     }));
-
                     //Add the Alpha bar widget
                     Manager.addWidget(new AjaxSolr.asuAlphaBarWidget({
                         id: 'asuAlphaBar',
-                        target: '#ajax-solr-alpha-bar' + fidNum,
-                        solrServer: solrServer,
-                        fieldConfigs: fieldConfigs,
-                        lastNameField: 'lastName',
-                        fieldId: fieldId
+                        target: '#ajax-solr-alpha-bar' + idNum,
+                        solr_server: solrServer,
+                        field_configs: fieldConfigs,
+                        last_name_field: 'lastName',
+                        field_id: field_id
                     }));
 
                     if (fieldConfigs.show_tree) {
                         // Add in a custom widget for managing the jqTree
                         Manager.addWidget(new AjaxSolr.asu_dirTreeWidget({
                             id: 'dirTree',
-                            target: '#treediv' + fidNum,
+                            target: '#treediv' + idNum,
                             tree: tree,
-                            fieldConfigs: fieldConfigs,
+                            field_configs: fieldConfigs,
                             top_level_ids: topLevelIds,
-                            fieldId: fieldId,
-                            fidNum: fidNum,
-                            savedDeptId: savedDeptId
+                            field_id: field_id,
+                            id_num: idNum,
+                            saved_dept_id: savedDeptId
                         }));
                     }
                     //First Item in array will be the default Sort
                     var sort_items = [
                         {
                         'field_name': 'lastNameSort',
-                        'fieldId': '#dir-lastNameSort' + fidNum
+                        'field_id': '#dir-lastNameSort' + idNum
                         },
                         {//field doesn't actually exist in solr yet
                             'field_name': 'tsort',
-                            'fieldId': '#dir-rankSort' + fidNum
+                            'field_id': '#dir-rankSort' + idNum
                         },
                         {
                             'field_name': 'firstNameSort',
-                            'fieldId': '#dir-firstNameSort' + fidNum
+                            'field_id': '#dir-firstNameSort' + idNum
                         }
                     ];
 
@@ -277,43 +267,43 @@ var ASUPeople = {};
                     // Add Sorting widget
                     Manager.addWidget(new AjaxSolr.asu_dirSortWidget({
                         id: 'asuDirSort',
-                        target: '#asu-dir-ajax-solr-sort' + fidNum,
-                        sortItems: sort_items,
-                        fieldConfigs: fieldConfigs,
-                        defaultSort: default_sort,
-                        titleSortField: titlesort_field,
-                        fieldId: fieldId
+                        target: '#asu-dir-ajax-solr-sort' + idNum,
+                        sort_items: sort_items,
+                        field_configs: fieldConfigs,
+                        default_sort: default_sort,
+                        titlesort_field: titlesort_field,
+                        field_id: field_id
                     }));
 
                     // Add in Results widget. See our custom
                     // js/widgets/isPeopleResultWidget.js method extending AbstractWidget.
                     Manager.addWidget(new AjaxSolr.asu_dirResultWidget({
                         id: 'people',
-                        target: '#asu-dir-ajax-solr-people' + fidNum,
-                        solrServer: solrServer,
-                        fieldConfigs: fieldConfigs,
-                        overrideFields: overrideFields,
-                        fieldId: fieldId,
-                        perPage: resPerPage,
-                        localPeople: localPeople,
-                        isearchUrl: iSearchUrl
+                        target: '#asu-dir-ajax-solr-people' + idNum,
+                        solr_server: solrServer,
+                        field_configs: fieldConfigs,
+                        override_fields: override_fields,
+                        field_id: field_id,
+                        per_page: resPerPage,
+                        local_people: localPeople,
+                        isearch_url: iSearchUrl
                     }));
 
                     Manager.addWidget(new AjaxSolr.asu_dirFacetWidget({
-                        id: 'facultyTitlesFacet' + fidNum,
-                        target: '#facultyTitlesFacet' + fidNum,
+                        id: 'facultyTitlesFacet' + idNum,
+                        target: '#facultyTitlesFacet' + idNum,
                         field: 'facultyTitlesFacet'
                     }));
 
                     Manager.addWidget(new AjaxSolr.asu_dirFacetWidget({
-                        id: 'expertiseAreasFacet' + fidNum,
-                        target: '#expertiseAreasFacet' + fidNum,
+                        id: 'expertiseAreasFacet' + idNum,
+                        target: '#expertiseAreasFacet' + idNum,
                         field: 'expertiseAreasFacet'
                     }));
 
                     // Manager.addWidget(new AjaxSolr.asu_dirFacetWidget({
-                    // id: 'primaryTitleFacet'+fidNum,
-                    // target: '#primaryTitleFacet'+fidNum,
+                    // id: 'primaryTitleFacet'+idNum,
+                    // target: '#primaryTitleFacet'+idNum,
                     // field: 'primaryTitlefacetf'
                     // }));
 
@@ -331,12 +321,12 @@ var ASUPeople = {};
                     // so there's no reason to have the current search breadcrumb showing
                     if (!universalCheck) {
                         Manager.addWidget(new AjaxSolr.asu_dirCurrentSearchWidget({
-                            id: 'currentSelections' + fidNum,
-                            target: '#' + selection_target + fidNum,
-                            fieldConfigs: fieldConfigs,
+                            id: 'currentSelections' + idNum,
+                            target: '#' + selection_target + idNum,
+                            field_configs: fieldConfigs,
                             tree: tree,
-                            fieldId: fieldId,
-                            fidNum: fidNum,
+                            field_id: field_id,
+                            id_num: idNum,
                             current_search_exclude: excludes
                         }));
                     }
@@ -345,7 +335,7 @@ var ASUPeople = {};
                     // or are using the universal filters
                     if (fieldConfigs.show_filter_omni || universalCheck) {
 
-                        var theTarget = '#asu-dir-ajax-solr-search' + fidNum;
+                        var theTarget = '#asu-dir-ajax-solr-search' + idNum;
 
                         if (universalCheck) {
                             theTarget = universalSearchBoxId;
@@ -356,9 +346,9 @@ var ASUPeople = {};
                         Manager.addWidget(new AjaxSolr.asu_dirTextWidget({
                             id: 'text',
                             target: theTarget,
-                            fieldConfigs: fieldConfigs,
+                            field_configs: fieldConfigs,
                             tree: tree,
-                            fieldId: fieldId
+                            field_id: field_id
                         }));
                     }
 
@@ -368,23 +358,23 @@ var ASUPeople = {};
                     // keep track of which field the
                     var first = false;
 
-                    if (dirTabNum == 0) {
+                    if (dir_tabnum == 0) {
                         first = true;
                     }
 
                     Manager.setStore(new AjaxSolr.asu_dirParameterHistoryStore({
-                        pageAlias: pageAlias,
+                        page_alias: pageAlias,
                         tree: tree,
-                        fieldConfigs: fieldConfigs,
-                        deptNids: savedDeptNids,
-                        fieldId: fieldId,
-                        isDefault: first,
-                        fidNum: fidNum,
-                        hasTabs: hasTabs,
-                        tabContainId: tabContainId,
-                        tabPaneId: tabPaneId,
-                        tabNum: dirTabNum,
-                        savedDeptNids: savedDeptNids
+                        field_configs: fieldConfigs,
+                        dept_nids: savedDeptNids,
+                        field_id: field_id,
+                        is_default: first,
+                        id_num: idNum,
+                        has_tabs: has_tabs,
+                        tab_contain_id: tab_contain_id,
+                        tab_pane_id: tab_pane_id,
+                        tab_num: dir_tabnum,
+                        saved_dept_nids: savedDeptNids
                     }));
 
                     Manager.store.exposed = ['fq', 'q', 'start', 'sort', 'rows'];
@@ -413,9 +403,8 @@ var ASUPeople = {};
 
                     }
 
-                    // if option to show breadcrumbs is enabled, then initialize with saved value
                     if (!fieldConfigs.show_tree && fieldConfigs.hasOwnProperty('breadcrumb')) {
-                        var crumb_element = $('.asu-dir-breadcrumb' + fidNum);
+                        var crumb_element = $('.asu-dir-breadcrumb' + idNum);
                         crumb_element.html(fieldConfigs.breadcrumb);
                     }
 
@@ -423,9 +412,6 @@ var ASUPeople = {};
                 }
             }//end of for loop
 
-
-            // once all widgets have been attached to each directory,
-            // init and doRequest
             for (var x = 0; x < ASUPeople.man_array.length; x++) {
                 ASUPeople.man_array[x].init();
                 ASUPeople.man_array[x].doRequest();

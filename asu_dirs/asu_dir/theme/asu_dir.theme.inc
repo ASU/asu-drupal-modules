@@ -295,40 +295,18 @@ function theme_asu_dir_ajax_solr_people(&$vars) {
   drupal_add_css(drupal_get_path('module', ASU_DIRECTORY_MODULE_NAME) . '/css/asu_dir_tree.css');
   drupal_add_css(drupal_get_path('module', ASU_DIRECTORY_MODULE_NAME) . '/css/asu_dir_people_block.css');
 
-  // get the default photo url, if configured, and pass information
-  // to the frontend
-  $display_default_photo = variable_get('isearch_display_default_photo', FALSE);
-  $photo_url = NULL;
-
-  if ($display_default_photo) {
-    $default_photo = asu_isearch_get_default_photo();
-
-
-    if (is_object($default_photo)) {
-      $photo_url = file_create_url($default_photo->uri);
-    }
-  }
-
-  $default_photo = array(
-    'display' => $display_default_photo,
-    'url' => $photo_url
-  );
-
-  $field_configs['default_photo'] = $default_photo;
-
-
   $settings = array(
-    'deptNids' => $field_items,
-    'fieldConfigs' => $field_configs,
-    'solrServer' => ASU_DIR_UTILITIES_SOLR_ENV,
+    'dept_nids' => $field_items,
+    'field_configs' => $field_configs,
+    'solr_server' => ASU_DIR_UTILITIES_SOLR_ENV,
     'admin' => $admin,
-    'topLevelIds' => $top_level_ids,
+    'top_level_ids' => $top_level_ids,
     'tree' => $tree,
-    'pageAlias' => $alias,
-    'titleSortField' => ASU_DIR_UTILITIES_TITLESORT_FIELD,
-    'fidNum' => $the_id,
-    'localPeople' => $local_people,
-    'isearchUrl' => ASU_DIR_UTILITIES_ISEARCH_URL
+    'page_alias' => $alias,
+    'titlesort_field' => ASU_DIR_UTILITIES_TITLESORT_FIELD,
+    'pane_id' => $the_id,
+    'local_people' => $local_people,
+    'isearch_url' => ASU_DIR_UTILITIES_ISEARCH_URL
   );
 
   drupal_add_js(array(ASU_DIRECTORY_MODULE_NAME . $the_id => $settings), 'setting');
