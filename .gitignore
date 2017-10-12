@@ -1,2 +1,39 @@
-# IDE files
+# Text editor generated files #
+###############################
+*.un~
+*.*~
+
+#        IDEs        #
+######################
 .idea
+nbproject
+
+# Packages #
+############
+*.7z
+*.dmg
+*.gz
+*.bz2
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.tgz
+
+# Logs and databases #
+######################
+*.log
+*.sql
+
+# OS generated files #
+######################
+.DS_Store*
+ehthumbs.db
+Icon
+Thumbs.db
+._*
+
+# SASS #
+##########
+.sass-cache
