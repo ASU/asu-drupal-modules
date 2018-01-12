@@ -42,12 +42,11 @@ function asu_brand_init() {
     
     $site_name = asu_brand_get_site_name();
     drupal_alter('asu_brand_sitename', $site_name); // Invoke alter
-    
+
     $js = 'window.ASUHeader = window.ASUHeader || {};';
     $js .= 'ASUHeader.site_menu = ASUHeader.site_menu || {};';
-    $js .= 'ASUHeader.site_menu.json = \''.json_encode($menu_array, JSON_HEX_APOS).'\';';
-    $js .= 'ASUHeader.site_menu.site_name = '.json_encode($site_name, JSON_HEX_APOS).';';
-    
+    $js .= 'ASUHeader.site_menu.json = \'' . json_encode($menu_array, JSON_HEX_APOS) . '\';';
+    $js .= 'ASUHeader.site_menu.site_name = ' . json_encode($site_name, JSON_HEX_APOS) . ';';
     drupal_add_js($js, array('type' => 'inline', 'scope' => 'header', 'group' => JS_THEME, 'weight' => -10));
   }
 }
@@ -102,7 +101,6 @@ function asu_brand_block_configure($delta = '') {
 /**
  * Implements hook_block_save().
  */
-
 function asu_brand_block_save($delta = '', $edit = array()) {
   switch ($delta) {
     case 'asu_brand_header':
@@ -113,6 +111,9 @@ function asu_brand_block_save($delta = '', $edit = array()) {
       variable_set('asu_brand_gtm_override', $edit['asu_brand_gtm_override']);
       variable_set('asu_brand_sitemenu_injection_flag', $edit['asu_brand_sitemenu_injection_flag']);
       variable_set('asu_brand_sitemenu_name', $edit['asu_brand_sitemenu_name']);
+      variable_set('asu_brand_parent_org_title', $edit['asu_brand_parent_org_title']);
+      variable_set('asu_brand_parent_org_url', $edit['asu_brand_parent_org_url']);
+      variable_set('asu_brand_override_url', $edit['asu_brand_override_url']);
       asu_brand_cache_clear();
       break;
     
