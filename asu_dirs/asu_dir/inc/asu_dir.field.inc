@@ -43,7 +43,7 @@ function asu_dir_field_is_empty($item, $field) {
     $tree_items = drupal_json_decode($item['horizontal_tabs']['content']['content_tabs']['department']['isearch_dept_tree']);
     if (count($tree_items['items']) > 0) {
 
-      foreach($tree_items['items'] as $item) {
+      foreach ($tree_items['items'] as $item) {
         if ($item['dept_nid'] == ASU_DIR_UTILITIES_TOP_LEVEL_DEPT_NID) {
           return TRUE;
         }
@@ -274,7 +274,6 @@ function asu_dir_field_widget_form(&$form, &$form_state, $field, $instance, $lan
       '#title' => 'Open Profile Links in New Tab',
       '#default_value' => $config['new_tab']
     );
-
 
 
     // get all nids of the dept tree, and pass them to
@@ -731,6 +730,13 @@ function asu_dir_field_widget_form(&$form, &$form_state, $field, $instance, $lan
       '#description' => t('The short bio is displayed below the title in the name column.'),
     );
 
+    $element['horizontal_tabs']['appearance']['appearance_tabs']['columns']['display_department'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Display department name under title?',
+      '#default_value' => $config['display_department'],
+      '#description' => t('The department nameis displayed below the title in the name column.'),
+    );
+
     // Advanced horizontal tab definition
     $element['horizontal_tabs']['advanced'] = array(
       '#type' => 'fieldset',
@@ -905,7 +911,7 @@ function asu_dir_field_presave($entity_type, $entity, $field, $instance, $langco
 
     'expertise_areas' => $expertise_areas,
 
-    'local_tags'=> $tags,
+    'local_tags' => $tags,
     'filter_title' => trim($values['horizontal_tabs']['content']['content_tabs']['otherfilters']['filter_title']),
 
     //Appearance -> Display
@@ -946,6 +952,7 @@ function asu_dir_field_presave($entity_type, $entity, $field, $instance, $langco
     //'display_room' => $values['horizontal_tabs']['appearance']['appearance_tabs']['columns']['display_room'],
     //'link_building_codes' => $values['horizontal_tabs']['appearance']['appearance_tabs']['columns']['link_building_codes'],
     'display_short_bio' => $values['horizontal_tabs']['appearance']['appearance_tabs']['columns']['display_short_bio'],
+    'display_department' => $values['horizontal_tabs']['appearance']['appearance_tabs']['columns']['display_department'],
 
     // Advanced
     'use_custom_q' => $values['horizontal_tabs']['advanced']['use_custom_q'],
@@ -959,7 +966,7 @@ function asu_dir_field_presave($entity_type, $entity, $field, $instance, $langco
   $root = $depts['items'][0]['dept_id'];
 
 
-  foreach($depts['items'] as $key => $item) {
+  foreach ($depts['items'] as $key => $item) {
     if ($item['options']['subdepts'] == TRUE) {
       $tree_nids = array_merge($tree_nids, $item['tree_nids']);
     }
