@@ -1,0 +1,48 @@
+<?php
+namespace Drupal\asu_userpicker;
+
+/**
+ * Default controller for the asu_userpicker module.
+ */
+class DefaultController extends ControllerBase {
+
+  public function asu_userpicker_autocomplete($string) {
+
+    // 1. Check existing users for asurite matches.
+  // 2. Check Solr for asurite matches.
+  // 3. Remove dupes and display.
+
+    // LOCAL SEARCH
+
+    $local_results = asu_userpicker_search_local($string);
+
+    $items = [];
+
+    foreach ($local_results as $local_result) {
+      // This is the cas_name/asurite ID.
+    // We need to save on drupal users names.
+    // We just force all usernames to be the same as ASURITE IDs.
+      $items[$local_result->name] = 'Existing user : ' . \Drupal\Component\Utility\Html::escape($local_result->cas_name . ' : <' . \Drupal\Component\Utility\Html::escape($local_result->mail) . '>');
+    }
+
+
+    // SOLR SEARCH 
+
+    // Query Solr on ASURITE ID and common name / full name.
+    $search_results = asu_userpicker_search_solr($string, $filters = [
+      'asuriteid',
+      'cn',
+    ]);
+
+    // Add users to our list
+    foreach ($solr_data['response']['docs'] as $solr_row) {
+      if ($solr_row['asuriteId']) {
+        $items[$solr_row['asuriteId']] = $solr_row['asuriteId'] . ' : ' . $solr_row['displayName'] . ' [' . $solr_row['emailAddress'] . ']';
+      }
+    }
+
+    print drupal_json_output($items);
+    exit();
+  }
+
+}

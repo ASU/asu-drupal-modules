@@ -1,0 +1,8 @@
+name: 'ASU Userpicker'
+description: 'Provides a custom user field widget for picking users in Drupal and ASU LDAP, and creating those not yet in Drupal.'
+core: 8.x
+package: ASU
+dependencies:
+  - cas
+  - field_ui
+type: module

@@ -1,0 +1,14 @@
+asu_userpicker.admin_settings:
+  path: /admin/config/people/asu_userpicker
+  defaults:
+    _title: 'ASU Userpicker settings'
+    _form: \Drupal\asu_userpicker\Form\AsuUserpickerAdminSettings
+  requirements:
+    _permission: 'administer users'
+asu_userpicker.autocomplete:
+  path: /autocomplete/asu/user/{search_name}/{count}
+  defaults:
+    _controller: '\Drupal\asu_userpicker\Controller\AsuUserpickerController::handleAutocomplete'
+    _format: json
+  requirements:
+    _permission: 'access user profiles'

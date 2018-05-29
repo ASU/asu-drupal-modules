@@ -1,6 +1,6 @@
 DESCRIPTION
 --------------------------
-Provides a custom user field widget for picking users in Drupal and ASU LDAP,
+Provides a custom user field widget for picking users in Drupal and ASU Solr, 
 and creating those not yet in Drupal.
 
 INSTALLATION
@@ -13,11 +13,9 @@ Configuration
 The ASU Userpicker module creates an AJAX autoocomplete userpicker widget
 and is easily assignable using the Fields managment UI in Drupal.
 
-It requires the CAS Attributes, LDAP Servers and User Reference modules to
-be enabled, and at least one LDAP Server to be configured.
-
-Using the ASU Userpicker with non-Field API managed fields requires custom
-code to map it into place:
+Using the ASU Userpicker with fields requires custom code to map it into place
+for field other than Fields API user_reference fields provided via the
+user_reference module (optional):
 
 Implement a form_alter() to change an existing userpicker field's
 '#autocomplete_path' to 'autocomplete/asu/user' and the '#element_validate'
