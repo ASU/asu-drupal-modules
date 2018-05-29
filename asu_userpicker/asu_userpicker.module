@@ -8,7 +8,7 @@
  * Michael Samuelson <mlsamuel@asu.edu> / <mlsamuelson@gmail.com>
  *
  * Module provides a custom user field widget for picking users in
- * Drupal and ASU LDAP, and creating those not yet in Drupal.
+ * Drupal and ASU Solr, and creating those not yet in Drupal.
  *
  */
 
@@ -16,19 +16,13 @@
   CONFIG
 *********************************************************************/
 
-// TODO No Admin UI, but you can tweak these settings as needed.
-define("ASU_USERPICKER_REFERENCEABLE_ROLES", variable_get('asu_userpicker_referenceable_roles', 
-    serialize(array(
-      2 => '2', // Authenticated user
-      3 => '0',
-    ))));
-define("ASU_USERPICKER_REFERENCEABLE_STATUS", variable_get('asu_userpicker_referenceable_status', 
-    serialize(array(
-      1 => '1', // Active users
-      0 => '0',
-    ))));
-define("ASU_USERPICKER_REFERENCEABLE_VIEW", variable_get('asu_userpicker_referenceables_view', ''));
-define("ASU_USERPICKER_LABEL", variable_get('asu_userpicker_label', 'USER'));
+define("ASU_USERPICKER_REFERENCEABLE_ROLES", \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_referenceable_roles'));
+define("ASU_USERPICKER_REFERENCEABLE_STATUS", \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_referenceable_status'));
+
+
+define("ASU_USERPICKER_SOLR_QUERY_URL", \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_solr_query_url'));
+define("ASU_USERPICKER_REFERENCEABLE_VIEW", \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_referenceables_view'));
+define("ASU_USERPICKER_LABEL", \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_label'));
 // Note, also, optional setting:
 // variable_get('asu_userpicker_search_user_fields', array());
 
@@ -40,11 +34,15 @@ define("ASU_USERPICKER_LABEL", variable_get('asu_userpicker_label', 'USER'));
  * Implements hook_field_widget_info().
  *
  */
+/* See src/Plugin/Field/FieldWidget/AsuUserpickerAutocomplete.php
 function asu_userpicker_field_widget_info() {
+  // NOTE:
+  // user_reference is now optional, but this line shouldn't
+  // cause any harm.
   return array(
     'asu_userpicker_autocomplete' => array(
       'label' => t('ASU User Picker Autocomplete'),
-      'description' => t('Autocomplete userpicker that searches current Drupal site as well as ASU LDAP'),
+      'description' => t('Autocomplete userpicker that searches current Drupal site as well as ASU Solr'),
       'field types' => array('user_reference'),
       'settings' => array(
         'autocomplete_match' => 'contains',
@@ -59,12 +57,14 @@ function asu_userpicker_field_widget_info() {
   ); 
 
 }
+*/
 
 
 /**
  * Implements hook_field_widget_form().
  *
  */
+/* See AsuUserpickerAdminSettings.php
 function asu_userpicker_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
 
   switch ($instance['widget']['type']) {
@@ -77,10 +77,16 @@ function asu_userpicker_field_widget_form(&$form, &$form_state, $field, $instanc
         '#element_validate' => array('asu_userpicker_autocomplete_validate'),
         '#value_callback' => 'user_reference_autocomplete_value',
       );
+      // Union above can block these, so overwrite. For accessibility.
+      // TODO Consider if we want to reverse the union, with our overides first.
+      // Titles is first problem we've had, so not changing anything else, yet.
+      $element['#title'] = $instance['label'];
+      $element['#title_display'] = 'invisible';
       break;
   }
   return array('uid' => $element);
 }
+*/
 
 /**
  * Implements hook_field_attach_presave().
@@ -107,6 +113,7 @@ function asu_userpicker_field_attach_presave($entity_type, $entity) {
  * Implements hook_menu().
  *
  */
+/* See asu_userpicker.routing.yml
 function asu_userpicker_menu() {
 
   $items['admin/config/people/asu_userpicker'] = array(
@@ -129,6 +136,7 @@ function asu_userpicker_menu() {
 
   return $items;
 }
+*/
 
 /**
  * Implements hook_form_FORM-ID_alter().
@@ -136,6 +144,7 @@ function asu_userpicker_menu() {
  * Add ASU Userpicker autocomplet to "Add CAS User" cas_add_user_form.
  *
  */
+/*  Add CAS User form isn't available at current time in D8 CAS/
 function asu_userpicker_form_cas_add_user_form_alter(&$form, &$form_state, $form_id) {
 
   // We don't have to set the field type, just set the autocomplete path...
@@ -145,6 +154,7 @@ function asu_userpicker_form_cas_add_user_form_alter(&$form, &$form_state, $form
   //$form['account']['cas_name']['#element_validate'] = 'asu_userpicker_autocomplete_validate';
   
 }
+*/
 
 /*********************************************************************
   CALLBACKS
@@ -154,10 +164,11 @@ function asu_userpicker_form_cas_add_user_form_alter(&$form, &$form_state, $form
  * Autocomplete callback for ASURITE textfield.
  *
  */
+/* See AsuUserpickerController.php
 function asu_userpicker_autocomplete($string) {
 
   // 1. Check existing users for asurite matches.
-  // 2. Check LDAP for asurite matches.
+  // 2. Check Solr for asurite matches.
   // 3. Remove dupes and display.
 
   // LOCAL SEARCH
@@ -170,24 +181,26 @@ function asu_userpicker_autocomplete($string) {
     // This is the cas_name/asurite ID.
     // We need to save on drupal users names.
     // We just force all usernames to be the same as ASURITE IDs.
-    $items[$local_result->name] = 'Existing user : ' . check_plain($local_result->cas_name . ' : <' . check_plain($local_result->mail) . '>');
+    $items[$local_result->name] = 'Existing user : ' . \Drupal\Component\Utility\Html::escape($local_result->cas_name . ' : <' . \Drupal\Component\Utility\Html::escape($local_result->mail) . '>');
   }
 
-  // LDAP Search 
 
-  // Query LDAP on ASURITE ID and common name / full name.
-  $search_results = asu_userpicker_search_ldap($string, $filters = array('asuriteid', 'cn'));
+  // SOLR SEARCH 
 
-  // Add non-existing users to our list
-  foreach ($search_results as $search_result) {
-    if ($search_result['asuriteid'][0]) {
-      $items[$search_result['asuriteid'][0]] = $search_result['asuriteid'][0] . ' : ' . $search_result['cn'][0] . ' <' . $search_result['mail'][0] . '>';
+  // Query Solr on ASURITE ID and common name / full name.
+  $search_results = asu_userpicker_search_solr($string, $filters = array('asuriteid', 'cn'));
+
+  // Add users to our list
+  foreach ($solr_data['response']['docs'] as $solr_row) {
+    if ($solr_row['asuriteId']) {
+      $items[$solr_row['asuriteId']] = $solr_row['asuriteId'] . ' : ' . $solr_row['displayName'] . ' [' . $solr_row['emailAddress'] . ']';
     }
   }
 
   print drupal_json_output($items);
   exit();
 }
+*/
 
 /*********************************************************************
   THEMING
@@ -205,7 +218,7 @@ function asu_userpicker_autocomplete_validate($element, &$form_state, $form) {
 
 
   // 1. Is this a valid local user?
-  // 2. Is this a valid asurite? (consult ldap)
+  // 2. Is this a valid asurite? (consult solr)
 
   // Assumes Field API field...
   $field = field_widget_field($element, $form_state);
@@ -222,20 +235,20 @@ function asu_userpicker_autocomplete_validate($element, &$form_state, $form) {
       // No Admin UI, but you can set manually. (See CONFIG section.)
       'referenceable_roles' => unserialize(ASU_USERPICKER_REFERENCEABLE_ROLES),
       'referenceable_status' => unserialize(ASU_USERPICKER_REFERENCEABLE_STATUS),
-      'view' => 
-      array(
-        // No Admin UI, but you can set manually. (See CONFIG section.)
-        'view_name' => ASU_USERPICKER_REFERENCEABLE_VIEW,
-        'display_name' => '',
-        'args' => 
-        array(),
-      ),
+      //'view' =>
+      //array(
+      //  // No Admin UI, but you can set manually. (See CONFIG section.)
+      //  'view_name' => ASU_USERPICKER_REFERENCEABLE_VIEW,
+      //  'display_name' => '',
+      //  'args' =>
+      //  array(),
+      //),
     );
   }
   $instance = field_widget_instance($element, $form_state);
   // If isn't a Field API managed field...
   if (!$instance) {
-    // No Admin UI, but you can set manually. (See CONFIG section.)
+    // No Admin UI, but you can set manually. (See CONFIG section of README.)
     $instance['label'] = ASU_USERPICKER_LABEL;
   }
 
@@ -250,7 +263,7 @@ function asu_userpicker_autocomplete_validate($element, &$form_state, $form) {
       // the uid.
       list(, $name, $uid) = $matches;
       if (!empty($name)) {
-        $names = _user_reference_get_user_names(array($uid));
+        $names = _asu_userpicker_get_user_names(array($uid));
         if ($name != $names[$uid]) {
           form_error($element, t('%name: name mismatch. Please check your selection.', array('%name' => $instance['label'])));
         }
@@ -265,7 +278,7 @@ function asu_userpicker_autocomplete_validate($element, &$form_state, $form) {
         'limit' => 1,
       );
 
-      $references = user_reference_potential_references($field, $options);
+      $references = asu_userpicker_potential_references($field, $options);
       // Found local user.
       if ($references) {
         // @todo The best thing would be to present the user with an
@@ -285,14 +298,16 @@ function asu_userpicker_autocomplete_validate($element, &$form_state, $form) {
         // us individual field context.
 
         // Let CAS create our new user based on ASURITE ID and mappings.
-        // Other attributes will be synced into place by CAS Attributes module when
+        // Other attributes can be synced into place by CAS Attributes module when
         // user logs in. Use that module's configs to set that up. See 
         // /admin/config/people/cas/attributes 
-        $options['edit']['mail'] = $asurite_user['mail'][0];
-        $new_user = cas_user_register($asurite_user['asuriteid'][0], $options);
+        $options['edit']['mail'] = $asurite_user['emailAddress'][0];
+        $new_user = cas_user_register($asurite_user['asuriteId'][0], $options);
+
+// TODO need cas_attributes? or create asu_solr_attributes?
 
         $uid = $new_user->uid;
-        $name = check_plain($new_user->name);
+        $name = \Drupal\Component\Utility\Html::escape($new_user->name);
 
         // On multi-value fields, adding more fields obliterates all but last
         // message. So just be generic to avoid confusion.
@@ -308,7 +323,7 @@ function asu_userpicker_autocomplete_validate($element, &$form_state, $form) {
 
   // Set the element's value as the user id that was extracted from the entered
   // input.
-  form_set_value($element, $uid, $form_state);
+  $form_state->setValueForElement($element, $uid);
 }
 
 
@@ -316,19 +331,288 @@ function asu_userpicker_autocomplete_validate($element, &$form_state, $form) {
   INTERNAL
 *********************************************************************/
 
+/** ADOPTED FROM references > user_reference module
+ * Retrieves an array of candidate referenceable users.
+ *
+ * This info is used in various places (aloowed values, autocomplete results,
+ * input validation...). Some of them only need the uids, others nid + names,
+ * others yet uid + names + rendered row (for display in widgets).
+ * The array we return contains all the potentially needed information, and lets
+ * consumers use the parts they actually need.
+ *
+ * @param $field
+ *   The field definition.
+ * @param $options
+ *   An array of options to limit the scope of the returned list. The following
+ *   key/value pairs are accepted:
+ *   - string: string to filter titles on (used by autocomplete).
+ *   - match: operator to match the above string against, can be any of:
+ *     'contains', 'equals', 'starts_with'. Defaults to 'contains'.
+ *   - ids: array of specific node ids to lookup.
+ *   - limit: maximum size of the the result set. Defaults to 0 (no limit).
+ *
+ * @return
+ *   An array of valid users in the form:
+ *   array(
+ *     uid => array(
+ *       'title' => The user name,
+ *       'rendered' => The text to display in widgets (can be HTML)
+ *     ),
+ *     ...
+ *   )
+ */
+/* @todo update??? */
+function asu_userpicker_potential_references($field, $options = array()) {
+  // Fill in default options.
+  $options += array(
+    'string' => '',
+    'match' => 'contains',
+    'ids' => array(),
+    'limit' => 0,
+  );
+
+  $results = &drupal_static(__FUNCTION__, array());
+
+  // Create unique id for static cache.
+  $cid = $field['field_name'] . ':' . $options['match'] . ':'
+    . ($options['string'] !== '' ? $options['string'] : implode('-', $options['ids']))
+    . ':' . $options['limit'];
+  if (!isset($results[$cid])) {
+    $references = FALSE;
+    if (\Drupal::moduleHandler()->moduleExists('views') && !empty($field['settings']['view']['view_name'])) {
+      $references = _asu_userpicker_potential_references_views($field, $options);
+    }
+
+    if ($references === FALSE) {
+      $references = _asu_userpicker_potential_references_standard($field, $options);
+    }
+
+    // Store the results.
+    $results[$cid] = !empty($references) ? $references : array();
+  }
+
+  return $results[$cid];
+}
+
+/** ADOPTED FROM references > user_reference module
+ * Helper function for asu_userpicker_potential_references().
+ *
+ * Case of Views-defined referenceable users.
+ */
+/* @todo update??? */
+function _asu_userpicker_potential_references_views($field, $options) {
+  $settings = $field['settings']['view'];
+  $options['title_field'] = 'name';
+  return asu_userpicker_potential_references_view('user', $settings['view_name'], $settings['display_name'], $settings['args'], $options);
+}
+
+/** ADOPTED FROM references > user_reference module
+ * Helper function for asu_userpicker_potential_references().
+ *
+ * List of referenceable users defined by user role and status.
+ */
+/* @todo update??? */
+function _asu_userpicker_potential_references_standard($field, $options) {
+  // Avoid useless work.
+  $filter_roles = array_filter($field['settings']['referenceable_roles']);
+  $filter_status = array_filter($field['settings']['referenceable_status']);
+  if (!count($filter_status) && !count($filter_roles)) {
+    return array();
+  }
+
+  $query = db_select('users', 'u')
+    // Select the whole record, so that format_username() has enough
+    // information.
+    ->fields('u')
+    ->addMetaData('id', ' _asu_userpicker_potential_references_standard')
+    ->addMetaData('field', $field)
+    ->addMetaData('options', $options);
+
+  // Enable this filter only if any statuses checked (and not both).
+  if (count($filter_status) == 1) {
+    $query->condition('u.status', array_keys($filter_status), 'IN');
+  }
+
+  // Skip filter when "authenticated user" choosen.
+  if ($filter_roles && !isset($filter_roles[\Drupal\Core\Session\AccountInterface::AUTHENTICATED_RID])) {
+    $query->join('users_roles', 'r', 'u.uid = r.uid');
+    $query->condition('r.rid', array_keys($filter_roles), 'IN');
+  }
+
+  if ($options['string'] !== '') {
+    switch ($options['match']) {
+      case 'contains':
+        $query->condition('u.name', '%' . $options['string'] . '%', 'LIKE');
+        break;
+
+      case 'starts_with':
+        $query->condition('u.name', $options['string'] . '%', 'LIKE');
+        break;
+
+      case 'equals':
+      default: // no match type or incorrect match type: use "="
+        $query->condition('u.name', $options['string'], '=');
+        break;
+    }
+  }
+
+  if ($options['ids']) {
+    $query->condition('u.uid', $options['ids'], 'IN');
+  }
+
+  // Explicitly exclude the anonymous user.
+  $query->condition('u.uid', 0, '<>');
+
+  if ($options['limit']) {
+    $query->range(0, $options['limit']);
+  }
+  $query->orderBy('u.name');
+
+  $result = $query->execute()->fetchAll();
+  $references = array();
+  foreach ($result as $account) {
+    $references[$account->uid] = array(
+      'title'    => $account->name,
+      'rendered' => \Drupal\Component\Utility\Html::escape(format_username($account)),
+    );
+  }
+  return $references;
+}
+
+/** ADOPTED FROM references > user_reference module
+ * Helper function for widgets and formatters.
+ *
+ * Store user names collected in the curent request.
+ */
+/* @todo update??? */
+function _asu_userpicker_get_user_names($uids, $known_titles = array()) {
+  $titles = &drupal_static(__FUNCTION__, array());
+
+  // Save titles we receive.
+  $titles += $known_titles;
+
+  // Collect nids to retrieve from database.
+  $uids_query = array();
+  foreach ($uids as $uid) {
+    if (!isset($titles[$uid])) {
+      $uids_query[] = $uid;
+    }
+  }
+  if ($uids_query) {
+    $query = db_select('users', 'u')
+      ->fields('u', array('uid', 'name'))
+      ->condition('u.uid', $uids);
+    $titles += $query->execute()->fetchAllKeyed();
+  }
+
+  // Build the results array.
+  $return = array();
+  foreach ($uids as $uid) {
+    $return[$uid] = isset($titles[$uid]) ? $titles[$uid] : '';
+  }
+
+  return $return;
+}
+
+/** ADOPTED FROM references module
+ * Retrieves an array of candidate referenceable entities, defined by a view.
+ *
+ * @param $entity_type
+ *   The entity type.
+ * @param $view_name
+ *   The name of the view.
+ * @param $display_name
+ *   The name of the view's display. This has to be a 'References' display.
+ * @param $args
+ *   The array of arguments ("contextual filters") for the view.
+ * @param $options
+ *   Array of options to limit the scope of the returned list. This parameter
+ *   is similar to the $options parameter for
+ *   node_reference_potential_references(). An additional key is required:
+ *   - title_field: the name of the column holding entities 'titles' within the
+ *     entity base table.
+ *
+ * @return
+ *   An array of entities, in the format expected by
+ *   node_reference_potential_references().
+ *
+ * @see node_reference_potential_references()
+ * @see _node_reference_potential_references_views()
+ */
+/* @todo update??? */
+function asu_userpicker_potential_references_view($entity_type, $view_name, $display_name, $args, $options) {
+  $entity_info = \Drupal::entityManager()->getDefinition($entity_type);
+
+  // Check that the view is valid and the display still exists.
+  $view = views_get_view($view_name);
+  if (!$view || $view->base_table != $entity_info['base table'] || !isset($view->display[$display_name])) {
+    return FALSE;
+  }
+
+  // If we have no access to the View an empty result should be returned to
+  // avoid triggering the fallback results.
+  if  (!$view->access(array($display_name))) {
+    return array();
+  }
+
+  // Temporary backwards compatibility for fields migrated from CCK D6: accept
+  // 'default' display, but dynamically add a 'references' display out of it.
+  if ($display_name == 'default') {
+    $display_name = $view->add_display('references');
+  }
+
+  $view->set_display($display_name);
+
+  // @todo From merlinofchaos on IRC : arguments using summary view can defeat
+  // the style setting.
+  // We might also need to check if there's an argument, and set its
+  // style_plugin as well.
+
+  // Set additional options to let references_plugin_display::query() narrow
+  // the results.
+  $references_options = array(
+    'ids' => $options['ids'],
+    'title_field' => $options['title_field'],
+    'string' => $options['string'],
+    'match' => $options['match'],
+  );
+  $view->display_handler->set_option('references_options', $references_options);
+
+  // We need the title field for autocomplete widgets, so add it (hidden) if not
+  // present.
+  $fields = $view->get_items('field', $display_name);
+  if (!isset($fields[$options['title_field']])) {
+    $label_options = array(
+      'exclude' => 1,
+    );
+    $view->add_item($display_name, 'field', $entity_info['base table'], $options['title_field'], $label_options);
+  }
+
+  // Limit result set size.
+  $limit = !empty($options['limit']) ? $options['limit'] : 0;
+  $view->display_handler->set_option('pager', array('type' => 'some', 'options' => array('items_per_page' => $limit)));
+
+  // Make sure the query is not cached
+  $view->is_cacheable = FALSE;
+
+  // Get the results.
+  $results = $view->execute_display($display_name, $args);
+
+  return $results;
+}
 
 /*********************************************************************
   API
 *********************************************************************/
 
 /**
- * Autocomplete LDAP query function.
+ * Autocomplete Solr query function.
  *
  * @param $string
  *   String to seach on.
  *
  * @param $filters
- *   Array of LDAP filters to consult in query. Some examples are 
+ *   Array of Solr filters to consult in query. Some examples are 
  *   asuriteid, cn, and eid.
  *
  * @param $wildcard
@@ -336,44 +620,31 @@ function asu_userpicker_autocomplete_validate($element, &$form_state, $form) {
  *    values.
  *
  * @return
- *   Array of raw results from LDAP.
+ *   Array of raw results from Solr.
  */
-function asu_userpicker_search_ldap($string, $filters = array('asuriteid'), $wildcard = TRUE) {
+// TODO Params need to be re-evaluated 
+function asu_userpicker_search_solr($string, $filters = array('asuriteid'), $wildcard = TRUE) {
 
-  // Query LDAP for list of users. 
+  error_log('STRING ' . $string);
 
-  // TODO No Admin UI for this variable, but you can set it manually with
-  // devel/php. If none set, we just use the first ldap server we find.
-  $asu_ldap_server = variable_get('asu_userpicker_ldap_server', '');
-  $ldap_server = ldap_servers_get_servers($asu_ldap_server, 'all', TRUE);
-  // We get an array if no $asu_ldap_server, just use the first in that case.
-  if (is_array($ldap_server)) {
-      $ldap_server = array_shift($ldap_server);
+  // Search Solr, ala https://webapp4-qa.asu.edu/solr/directory/select?q={!edismax}*SOMESEARCHSTRING*&rows=10&wt=json
+  $solr_base_url = \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_solr_query_url');
+  $solr_query_url = $solr_base_url. '?q=%7B!edismax%7D*' . urlencode(\Drupal\Component\Utility\Html::escape($string)) . '*&rows=20&wt=json';
+
+  error_log($solr_query_url);
+  $client = \Drupal::httpClient();
+  try {
+    $response = $client->request('GET', $solr_query_url);
+    $data = $response->getBody()->getContents();
+
+    // Return the response.
+    $solr_data = \Drupal\Component\Serialization\Json::decode($data);
+    return $solr_data;
   }
-    
-
-  //$filter = "asuriteid=*$string*";
-  //$filter = "cn=*$string*";
-  //$filter = "affilateid=*$string*";
-  // An array of filters will be assembled like so
-  // "(|(asuriteid=*$string*)(cn=*$string*)(affiliateid=*$string*))";
-
-  $wildcard_value = $wildcard ? '*' : '';
-  $search_filters = '';
-  $count = 0;
-  foreach ($filters as $filter) {
-    $search_filters .= '('. $filter . '=' . $wildcard_value . $string . $wildcard_value . ')';
-    $count++;
+  catch (RequestException $e) {
+    watchdog_exception('asu_userpicker', $e);
+    return;
   }
-  if ($count > 1) { // OR syntax
-    $search_filters = '(|' . $search_filters . ')';
-  }
-
-  // Note we limit size to 10 results, and set a time limit at 20 (seconds,
-  //  assumed).
-  $search_results = $ldap_server->search($base_dn = NULL, $search_filters, $attributes = array(), $attrsonly = 0, $sizelimit = 10, $timelimit = 10, $deref = LDAP_DEREF_NEVER);
-
-  return $search_results;
 }
 
 /**
@@ -385,13 +656,14 @@ function asu_userpicker_search_ldap($string, $filters = array('asuriteid'), $wil
  * @return
  *   Array of raw results from query.
  */
+/* @todo update */
 function asu_userpicker_search_local($string) {
 
   // TODO how best to handle escaping here so cases like
   // Smith-Jones and O'Malley are searchable...
   // Need to consider this same issue for 
   // asu_userpicker_search_local() ?
-  $string = check_plain($string);
+  $string = \Drupal\Component\Utility\Html::escape($string);
 
   $items = array();
 
@@ -405,12 +677,16 @@ function asu_userpicker_search_local($string) {
   $query->fields('u', array('name', 'mail'));
 
   // Add in admin configured user fields, if any.
-  $user_search_fields = array_filter(variable_get('asu_userpicker_search_user_fields', array()));
+  // @FIXME
+// Could not extract the default value because it is either indeterminate, or
+// not scalar. You'll need to provide a default value in
+// config/install/asu_userpicker.settings.yml and config/schema/asu_userpicker.schema.yml.
+$user_search_fields = array_filter(\Drupal::config('asu_userpicker.settings')->get('asu_userpicker_search_user_fields'));
 
   $user_field_conditions = '';
   foreach ($user_search_fields as $user_search_field) {
 
-    $clean_user_search_field = check_plain($user_search_field);
+    $clean_user_search_field = \Drupal\Component\Utility\Html::escape($user_search_field);
 
     // JOIN {<checked user field>} with {users}
     $query->leftJoin('field_data_' . $clean_user_search_field, 'f_' . $clean_user_search_field, 'f_' . $clean_user_search_field . '.entity_id = u.uid'); 
@@ -437,16 +713,66 @@ function asu_userpicker_search_local($string) {
  *   Boolean Whether or not to return value as boolean.
  *
  * @return
- *   Boolean True if ASURITE ID exists.
+ *   Mixed/Boolean True if ASURITE ID exists.
  */
+/* @todo update */
 function asu_userpicker_asurite_exists($string, $bool = TRUE) {
 
   if ($bool) {
-    return (bool) cas_ldap_attributes($string);
+    return (bool) asu_userpicker_get_solr_profile_record($string);
   }
   else {
-    return cas_ldap_attributes($string);
+    return asu_userpicker_get_solr_profile_record($string);
   }
+}
+
+/**
+ * API function to get a person/profile record from Solr.
+ *
+ * @param string/int $asurite An ASURITE.
+ *
+ * @return array Solr record for profile.
+ */
+/* @todo update */
+function asu_userpicker_get_solr_profile_record($asurite) {
+
+  // Abort.
+  if (is_null($asurite)) {
+    return;
+  }
+
+  // Do Solr query ala https://webapp4.asu.edu/solr/directory/select?q=%7B!edismax%7DasuriteId:myasurite&rows=1&wt=json
+  // And populate $record.
+  $solr_url = \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_solr_query_url');
+  $solr_query_url = $solr_url . '?q=%7B!edismax%7DasuriteId:' . \Drupal\Component\Utility\Html::escape($asurite) . '&rows=1&wt=json';
+  // @FIXME
+// drupal_http_request() has been replaced by the Guzzle HTTP client, which is bundled
+// with Drupal core.
+// 
+// 
+// @see https://www.drupal.org/node/1862446
+// @see http://docs.guzzlephp.org/en/latest
+// $solr_response = drupal_http_request($solr_query_url);
+
+  $solr_count = 0;
+  
+  $record = FALSE;
+  if ($solr_response->code == 200) { // Successful query, but results...?
+    $solr_data = \Drupal\Component\Serialization\Json::decode($solr_response->data);
+
+    // Check here that the asurite ID is a 100% match with the record, as
+    // Solr does a "contains" match.
+    $solr_count = $solr_data['response']['numFound'];
+    if ($solr_count > 0) {
+      foreach($solr_data['response']['docs'] as $doc_delta => $doc) {
+        if ($doc['asuriteId'] == $asurite) {
+          $record = $solr_data['response']['docs'][$doc_delta];
+        }
+      }
+    }
+  }
+
+  return $record;
 }
 
 

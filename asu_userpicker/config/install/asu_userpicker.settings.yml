@@ -1,0 +1,5 @@
+asu_userpicker_solr_query_url: 'https://asudir-solr.asu.edu/asudir/directory/select'
+asu_userpicker_referenceables_view: ''
+asu_userpicker_label: USER
+asu_userpicker_referenceable_roles: ['authenticated']
+asu_userpicker_referenceable_status: [1]
