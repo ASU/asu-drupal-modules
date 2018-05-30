@@ -10,6 +10,7 @@ use Drupal\Core\Field\FieldItemListInterface;
 use Drupal\Core\Field\Plugin\Field\FieldWidget\EntityReferenceAutocompleteWidget;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\user\Entity\Role;
+use Drupal\user\Entity\User;
 //use Drupal\views\Views;
 
 /**
@@ -49,78 +50,57 @@ class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
     // are altering that code below.
     //$element = parent::formElement($items, $delta, $element, $form, $form_state);
 
+    // ref: https://api.drupal.org/api/drupal/core%21modules%21link%21src%21Plugin%21Field%21FieldWidget%21LinkWidget.php/function/LinkWidget%3A%3AformElement/8.2.x
+
     $entity = $items->getEntity();
     $referenced_entities = $items->referencedEntities();
 
     // Append the match operation to the selection settings.
-//
     $selection_settings = $this->getFieldSetting('handler_settings') + ['match_operator' => $this->getSetting('match_operator')];
 
-    //error_log(var_export(array_keys($form_state->getStorage()['field_storage']['#parents']['#fields']), 1));
-    //error_log(var_export($form_state->getValue(), 1));
-    //error_log(var_export($form_state->get(), 1));
-    //$entity_def = $items->getFieldDefinition();
-    //error_log(var_export($entity_def, 1));
-    /*
-        $element += [
-          '#type' => 'entity_autocomplete',
-          //'#target_type' => $this->getFieldSetting('target_type'),
-          '#target_type' => 'user',
-          '#selection_handler' => $this->getFieldSetting('handler'),
-          '#selection_settings' => $selection_settings,
-          // Entity reference field items are handling validation themselves via
-          // the 'ValidReference' constraint.
-          '#validate_reference' => FALSE,
-          '#maxlength' => 1024,
-          '#default_value' => isset($referenced_entities[$delta]) ? $referenced_entities[$delta] : NULL,
-          //'#size' => $this->getSetting('size'),
-          //'#placeholder' => $this->getSetting('placeholder'),
-          //'#element_validate' => [[get_called_class(), 'validateUriElement']],
-
-          '#autocomplete_route_name' => 'asu_userpicker.autocomplete',
-          // @todo add setting for count and wire in here.
-          '#autocomplete_route_parameters' => array('search_name' => 'name', 'count' => 10),
-        ];
-        // ref: https://api.drupal.org/api/drupal/core%21modules%21link%21src%21Plugin%21Field%21FieldWidget%21LinkWidget.php/function/LinkWidget%3A%3AformElement/8.2.x
-        // #
-    */
     $element += [
-      // @todo if we use entity_autocomplete, we can't use #autocomplete_route_* parmeters... and we need those. Alternative?
+      // Using the textfield type, overriding the entity_autocomplete type, so
+      // we can tap into the #autocomplete_route_* parameters. Just requires
+      // some tweakery in massageFormValues().
       '#type' => 'textfield',
-      // @todo works on node form, breaks settings page for field...
-//      '#type' => 'entity_autocomplete', // @todo doesn't work on node form, works on settings page
-
       // @todo add setting for placeholder and wire in here.
       '#placeholder' => $this->t('Name or ASURITE'),
+      //'#placeholder' => $this->getSetting('placeholder'),
       '#autocomplete_route_name' => 'asu_userpicker.autocomplete',
       // @todo add setting for count and wire in here.
       '#autocomplete_route_parameters' => array(
         'search_name' => 'name',
         'count' => 10
       ),
-      '#default_value' => isset($referenced_entities[$delta]) ? $referenced_entities[$delta] : NULL,
+      '#default_value' => isset($referenced_entities[$delta]) ? $referenced_entities[$delta]->get('name')->value : NULL,
+      // Don't process default value...
+      //'#process_default_value' => FALSE,
+
+      // Autocreate on "user doesn't work, by design:
+      // https://www.drupal.org/project/drupal/issues/2700411
+      // @todo do we want to keep track of this? Force it to autocomplete? How to make the UI clear?
       //'#autocreate' => FALSE,
       //'#autocreate[bundle]' => 'user',
 
-      '#target_type' => 'user',
-      // ??? use this instead of controller ??? '#selection_handler' => $this->getFieldSetting('handler'),
+      '#target_type' => $this->getFieldSetting('target_type'), // 'user'
+      // @todo alt approach would be to do custom selection handler...
+      // @todo Our logic ignores these settings, currently.
+      '#selection_handler' => $this->getFieldSetting('handler'),
+      '#selection_settings' => $selection_settings,
+
       // Entity reference field items are handling validation themselves via
       // the 'ValidReference' constraint. @todo verify
       '#validate_reference' => FALSE,
-
-      // Don't process default value...
-      '#process_default_value' => FALSE,
-
       //'#element_validate' => [ [$this, 'validate'] ],
 
       //'#selection_settings' => $selection_settings,
-      //'#maxlength' => 1024,
+      '#maxlength' => 1024,
       // @todo add setting for size?
       //'#size' => $this->getSetting('size'),
       // @todo add setting for placeholder... something about asurite id?
-      //'#placeholder' => $this->getSetting('placeholder'),
     ];
 
+    // @todo What to make of this? Can probably yank.
     if ($this->getSelectionHandlerSetting('auto_create') && ($bundle = $this->getAutocreateBundle())) {
       $element['#autocreate'] = [
         'bundle' => $bundle,
@@ -131,7 +111,8 @@ class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
 
     return ['target_id' => $element];
 
-
+    // @todo remove, when determined we're not tapping into standard autocreate
+    // routines here. Yank when the conditional above goes.
     return $element;
   }
 
@@ -221,14 +202,34 @@ class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
 
 
   /**
-   * Need this in order to avoid error on field settings page:
-   *   "This value should be of the correct primitive type" @todo didn't work... however we may be able to use this for doing our own autocreate if needed...
    *
    * {@inheritdoc}
    */
   public function massageFormValues(array $values, array $form, FormStateInterface $form_state) {
+
     foreach ($values as $key => $value) {
-      //$values[$key] = '';
+
+
+      // Need this in order to avoid error on field settings page:
+      // "This value should be of the correct primitive type."
+      if ($value['target_id'] == '') {
+        $values[$key] = NULL;
+      }
+
+      dpm($value);
+
+      $search_string = $value['target_id'];
+
+      // @todo compare with original validaiton function in .module
+
+      // @todo do autocreate here, ourselves? (based on setting?)
+      // 1. check if user exists locally
+        // if yes, set target_id.
+      // 2. check if user exists in solr
+      // 3. create user based on solr values with CAS tie-ins
+      // 4. set form value(s) to target id (uid).
+
+
     }
     return $values;
   }

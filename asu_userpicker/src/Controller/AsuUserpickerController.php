@@ -38,7 +38,6 @@ class AsuUserpickerController extends ControllerBase {
 // @todo how to populate user for CAS login?  Is there a hook in for cas create? or to assoc the user at cas login?
 // @todo remove validate function? not needed, right?
 
-
       // 1. Check existing users for asurite matches.
       // 2. Check Solr for asurite matches.
       // 3. Remove dupes and display.

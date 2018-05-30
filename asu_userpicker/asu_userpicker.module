@@ -622,7 +622,7 @@ function asu_userpicker_potential_references_view($entity_type, $view_name, $dis
  * @return
  *   Array of raw results from Solr.
  */
-// TODO Params need to be re-evaluated 
+// TODO Params need to be re-evaluated / re-mapped in
 function asu_userpicker_search_solr($string, $filters = array('asuriteid'), $wildcard = TRUE) {
 
   error_log('STRING ' . $string);
