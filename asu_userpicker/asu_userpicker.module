@@ -733,7 +733,6 @@ function asu_userpicker_asurite_exists($string, $bool = TRUE) {
  *
  * @return array Solr record for profile.
  */
-/* @todo update */
 function asu_userpicker_get_solr_profile_record($asurite) {
 
   // Abort.
@@ -743,25 +742,19 @@ function asu_userpicker_get_solr_profile_record($asurite) {
 
   // Do Solr query ala https://webapp4.asu.edu/solr/directory/select?q=%7B!edismax%7DasuriteId:myasurite&rows=1&wt=json
   // And populate $record.
-  $solr_url = \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_solr_query_url');
-  $solr_query_url = $solr_url . '?q=%7B!edismax%7DasuriteId:' . \Drupal\Component\Utility\Html::escape($asurite) . '&rows=1&wt=json';
-  // @FIXME
-// drupal_http_request() has been replaced by the Guzzle HTTP client, which is bundled
-// with Drupal core.
-// 
-// 
-// @see https://www.drupal.org/node/1862446
-// @see http://docs.guzzlephp.org/en/latest
-// $solr_response = drupal_http_request($solr_query_url);
+  $solr_base_url = \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_solr_query_url');
+  $solr_query_url = $solr_base_url . '?q=%7B!edismax%7DasuriteId:' . \Drupal\Component\Utility\Html::escape($asurite) . '&rows=1&wt=json';
 
-  $solr_count = 0;
-  
-  $record = FALSE;
-  if ($solr_response->code == 200) { // Successful query, but results...?
-    $solr_data = \Drupal\Component\Serialization\Json::decode($solr_response->data);
+  $client = \Drupal::httpClient();
+  try {
+    $response = $client->request('GET', $solr_query_url);
+    $data = $response->getBody()->getContents();
+
+    $solr_data = \Drupal\Component\Serialization\Json::decode($data);
 
     // Check here that the asurite ID is a 100% match with the record, as
     // Solr does a "contains" match.
+    $record = NULL;
     $solr_count = $solr_data['response']['numFound'];
     if ($solr_count > 0) {
       foreach($solr_data['response']['docs'] as $doc_delta => $doc) {
@@ -770,9 +763,14 @@ function asu_userpicker_get_solr_profile_record($asurite) {
         }
       }
     }
+    return $record; // Should only be one.
   }
-
-  return $record;
+  catch (RequestException $e) {
+    watchdog_exception('asu_userpicker', $e);
+    // \Drupal::logger('asu_userpicker')->error($e);
+    return [];
+  }
+  return [];
 }
 
 

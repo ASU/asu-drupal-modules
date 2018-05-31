@@ -209,16 +209,57 @@ class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
 
     foreach ($values as $key => $value) {
 
-
       // Need this in order to avoid error on field settings page:
       // "This value should be of the correct primitive type."
       if ($value['target_id'] == '') {
         $values[$key] = NULL;
       }
 
+      $target_id = NULL;
+
+
       dpm($value);
 
-      $search_string = $value['target_id'];
+      $input_string = $value['target_id'];
+
+      // Check for user already in Drupal.
+      $acct = user_load_by_name($input_string);
+      if ($acct) {
+        // Lineup our target_id.
+        $target_id = $acct->id();
+        $values[$key] = $target_id;
+        continue;
+      }
+
+      // Check CAS user record from External Auth that wasn't in Drupal users.
+      // @todo Needed? If external auth users don't get created in Drupal, we'll want to look up this way, too.
+      $cas_user_manager = \Drupal::service('cas.user_manager');
+      $cas_uid = $cas_user_manager->getUidForCasUsername($input_string);
+      if ($cas_uid) {
+        $values[$key] = $cas_uid;
+        continue;
+      }
+
+      // Check for user in Solr.
+      $solr_acct = asu_userpicker_get_solr_profile_record($input_string);
+      if ($solr_acct) {
+
+        // Create user via CAS.
+        $cas_user_manager = \Drupal::service('cas.user_manager');
+        $property_values['mail'] = $solr_acct['emailAddress'];
+        // @todo Include other field mappings when we add that in.
+        // pass and name are handled for us.
+        $new_acct = $cas_user_manager->register($input_string, $property_values);
+
+        // Lineup new user's target_id.
+        $values[$key] = $new_acct->id();
+      }
+
+      dpm($target_id);
+
+
+      //$values[$key] = $target_id;
+
 
       // @todo compare with original validaiton function in .module
 
