@@ -640,8 +640,10 @@ function asu_userpicker_search_solr($string, $filters = array('asuriteid'), $wil
   }
   catch (RequestException $e) {
     watchdog_exception('asu_userpicker', $e);
-    return;
+    // \Drupal::logger('asu_userpicker')->error($e);
+    return [];
   }
+  return [];
 }
 
 /**
