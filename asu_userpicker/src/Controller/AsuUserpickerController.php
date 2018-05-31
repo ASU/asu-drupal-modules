@@ -34,9 +34,9 @@ class AsuUserpickerController extends ControllerBase {
       // definition passed from  AsuUserpickerAutocomplete.php.
       $search_name = $search_string;
 
-// @todo use built-in autocreate? if so, add settings note to README
-// @todo how to populate user for CAS login?  Is there a hook in for cas create? or to assoc the user at cas login?
-// @todo remove validate function in .module not needed, right?
+      // @todo use built-in autocreate? if so, add settings note to README
+      // @todo how to populate user for CAS login?  Is there a hook in for cas create? or to assoc the user at cas login?
+      // @todo remove validate function in .module not needed, right?
 
       // 1. Check existing users for asurite matches.
       // 2. Check Solr for asurite matches.
