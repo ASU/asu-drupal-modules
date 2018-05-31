@@ -36,7 +36,7 @@ class AsuUserpickerController extends ControllerBase {
 
 // @todo use built-in autocreate? if so, add settings note to README
 // @todo how to populate user for CAS login?  Is there a hook in for cas create? or to assoc the user at cas login?
-// @todo remove validate function? not needed, right?
+// @todo remove validate function in .module not needed, right?
 
       // 1. Check existing users for asurite matches.
       // 2. Check Solr for asurite matches.
@@ -44,19 +44,17 @@ class AsuUserpickerController extends ControllerBase {
 
       // LOCAL SEARCH
 
-/* @todo get local search working!
       $local_results = asu_userpicker_search_local($search_string);
-
-      $items = [];
 
       foreach ($local_results as $local_result) {
         // This is the cas_name/asurite ID.
         // We need to save on drupal users names.
         // We just force all usernames to be the same as ASURITE IDs.
-        $items[$local_result->name] = 'Existing user : ' . \Drupal\Component\Utility\Html::escape($local_result->cas_name . ' : <' . \Drupal\Component\Utility\Html::escape($local_result->mail) . '>');
+        $results[] = [
+          'value' => $local_result->name,
+          'label' => $this->t('Local user : ') . \Drupal\Component\Utility\Html::escape($local_result->name . ' : <' . \Drupal\Component\Utility\Html::escape($local_result->mail) . '>')
+        ];
       }
-*/
-
 
       // SOLR SEARCH
 
