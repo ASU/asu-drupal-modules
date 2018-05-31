@@ -651,10 +651,10 @@ function asu_userpicker_search_solr($string, $filters = array('asuriteid'), $wil
  * Autocomplete local Drupal query function.
  *
  * @param $string
- *   String to seach on.
+ *   String to search on.
  *
  * @return
- *   Array of raw results from query.
+ *   Query results object.
  */
 /* @todo update */
 function asu_userpicker_search_local($string) {
@@ -665,39 +665,41 @@ function asu_userpicker_search_local($string) {
   // asu_userpicker_search_local() ?
   $string = \Drupal\Component\Utility\Html::escape($string);
 
-  $items = array();
+  $connection = \Drupal::database();
 
-  // Query {user}.name
-  $query = db_select('users', 'u');
-  // JOIN {cas_user} with {users}
-  $query->leftJoin('cas_user', 'cu', 'cu.uid = u.uid');
+  // Query {users_field_data}.name
+  $query = $connection->select('users_field_data', 'ufd');
+  // JOIN {authmap} with {users_field_data}
+  $query->leftJoin('authmap', 'am', 'am.uid = ufd.uid');
 
   // FIELDS
-  $query->fields('cu', array('uid', 'cas_name'));
-  $query->fields('u', array('name', 'mail'));
+  $query->fields('am', array('uid', 'authname'));
+  $query->fields('ufd', array('name', 'mail'));
 
   // Add in admin configured user fields, if any.
+  // @todo We've removed the configurable search fields from the settings for
+  // now and we only search locally on username and mail.
   // @FIXME
-// Could not extract the default value because it is either indeterminate, or
-// not scalar. You'll need to provide a default value in
-// config/install/asu_userpicker.settings.yml and config/schema/asu_userpicker.schema.yml.
-$user_search_fields = array_filter(\Drupal::config('asu_userpicker.settings')->get('asu_userpicker_search_user_fields'));
-
+  // Could not extract the default value because it is either indeterminate, or
+  // not scalar. You'll need to provide a default value in
+  // config/install/asu_userpicker.settings.yml and config/schema/asu_userpicker.schema.yml.
   $user_field_conditions = '';
+  /*
+  $user_search_fields = array_filter(\Drupal::config('asu_userpicker.settings')->get('asu_userpicker_search_user_fields'));
   foreach ($user_search_fields as $user_search_field) {
 
     $clean_user_search_field = \Drupal\Component\Utility\Html::escape($user_search_field);
 
     // JOIN {<checked user field>} with {users}
-    $query->leftJoin('field_data_' . $clean_user_search_field, 'f_' . $clean_user_search_field, 'f_' . $clean_user_search_field . '.entity_id = u.uid'); 
+    $query->leftJoin('field_data_' . $clean_user_search_field, 'f_' . $clean_user_search_field, 'f_' . $clean_user_search_field . '.entity_id = u.uid');
     // FIELDS to return in query
     $query->fields('f_' . $clean_user_search_field, array($clean_user_search_field . '_value'));
     // CONDITIONS in where clause
     $user_field_conditions .= " OR (f_" . $clean_user_search_field . "." . $clean_user_search_field . "_value LIKE '%".$string."%')";
 
   }
-
-  $query->where("((u.name LIKE '%".$string."%') OR (u.mail LIKE '%".$string."%') OR (cu.cas_name LIKE '%".$string."%')" . $user_field_conditions .")");
+  */
+  $query->where("((ufd.name LIKE '%".$string."%') OR (ufd.mail LIKE '%".$string."%') OR (am.authname LIKE '%".$string."%')" . $user_field_conditions .")");
 
   $local_results = $query->orderRandom()->execute();
 
@@ -781,3 +783,61 @@ function asu_userpicker_get_solr_profile_record($asurite) {
 *********************************************************************/
 
 
+/* Possibly helpful bits of code.
+
+  // from user form alter done by cas module...
+  $cas_user_manager = \Drupal::service('cas.user_manager');
+  $account = $form_state->getFormObject()->getEntity();
+  $cas_username = $cas_user_manager->getCasUsernameForAccount($account->id());
+
+  // example of working with a form_state
+  $cas_username = $form_state->getValue('cas_username');
+
+
+    if (!empty($cas_username)) {
+      $cas_user_manager = \Drupal::service('cas.user_manager');
+      $existing_uid = $cas_user_manager->getUidForCasUsername($cas_username);
+      $user_being_edited = $form_state->getFormObject()->getEntity();
+
+      if ($existing_uid && $existing_uid !== $user_being_edited->id()) {
+        $form_state->setError($form['cas_username'], t('The specified CAS username is already in use by another user.'));
+      }
+    }
+
+
+  // From _cas_user_form_submit()
+  $cas_user_manager = \Drupal::service('cas.user_manager');
+  $account = $form_state->getFormObject()->getEntity();
+  if ($form_state->getValue('cas_username')) {
+    $cas_user_manager->setCasUsernameForAccount($account, $form_state->getValue('cas_username'));
+  }
+  else {
+    $cas_user_manager->removeCasUsernameForAccount($account);
+  }
+
+
+    $cas_user_manager = \Drupal::service('cas.user_manager');
+    if ($cas_user_manager->getCasUsernameForAccount($uid)) {
+
+
+// *************************
+    $cas_user_manager = \Drupal::service('cas.user_manager');
+    $cas_user_manager->register($authname, array $property_values = []);
+    $cas_user_manager->getCasUsernameForAccount($uid);
+    $cas_user_manager->getUidForCasUsername($cas_username);
+    $cas_user_manager->setCasUsernameForAccount(UserInterface $account, $cas_username)
+    $cas_user_manager->getEmailForNewAccount(CasPropertyBag $cas_property_bag);
+    $cas_user_manager->
+    $cas_user_manager->
+
+
+  use Drupal\externalauth\ExternalAuth;
+  // has ->load($authname, $provider)
+  // has ->register($authname, $provider, $account_data = array(), $authmap_data = NULL)
+
+
+  use Drupal\externalauth\Authmap;
+  // has ->save(UserInterface $account, $provider, $authname, $data = NULL)
+  // and more...
+
+ */
