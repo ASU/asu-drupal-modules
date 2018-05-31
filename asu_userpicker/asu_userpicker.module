@@ -625,13 +625,10 @@ function asu_userpicker_potential_references_view($entity_type, $view_name, $dis
 // TODO Params need to be re-evaluated / re-mapped in
 function asu_userpicker_search_solr($string, $filters = array('asuriteid'), $wildcard = TRUE) {
 
-  error_log('STRING ' . $string);
-
   // Search Solr, ala https://webapp4-qa.asu.edu/solr/directory/select?q={!edismax}*SOMESEARCHSTRING*&rows=10&wt=json
   $solr_base_url = \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_solr_query_url');
   $solr_query_url = $solr_base_url. '?q=%7B!edismax%7D*' . urlencode(\Drupal\Component\Utility\Html::escape($string)) . '*&rows=20&wt=json';
 
-  error_log($solr_query_url);
   $client = \Drupal::httpClient();
   try {
     $response = $client->request('GET', $solr_query_url);
@@ -656,7 +653,6 @@ function asu_userpicker_search_solr($string, $filters = array('asuriteid'), $wil
  * @return
  *   Query results object.
  */
-/* @todo update */
 function asu_userpicker_search_local($string) {
 
   // TODO how best to handle escaping here so cases like
