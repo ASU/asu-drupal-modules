@@ -207,6 +207,18 @@ class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
    */
   public function massageFormValues(array $values, array $form, FormStateInterface $form_state) {
 
+    /*
+     * Use massageFormValues to accomplish three jobs:
+     *   1. Massage form values to avoid "primitive type" error on field settings
+     *      page.
+     *   2. Massage form values to convert a user name string into a target_id
+     *      UID.
+     *   3. In the case where the user name doesn't exists locally but does in
+     *      Solr, work with cas.user_manager service to create the user, then map
+     *      in target_id UID value.
+     *
+     */
+
     foreach ($values as $key => $value) {
 
       // Need this in order to avoid error on field settings page:
@@ -217,59 +229,43 @@ class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
 
       $target_id = NULL;
 
-
-      dpm($value);
-
-      $input_string = $value['target_id'];
+      $input_string = $value['target_id']; // It's not a target_id at current.
 
       // Check for user already in Drupal.
       $acct = user_load_by_name($input_string);
       if ($acct) {
-        // Lineup our target_id.
+        // Lineup our target_id for reference.
         $target_id = $acct->id();
         $values[$key] = $target_id;
         continue;
       }
 
       // Check CAS user record from External Auth that wasn't in Drupal users.
-      // @todo Needed? If external auth users don't get created in Drupal, we'll want to look up this way, too.
+      // @todo Needed?
+      // If external auth users don't get created in Drupal, we'll want to look
+      // up this way, too.
       $cas_user_manager = \Drupal::service('cas.user_manager');
       $cas_uid = $cas_user_manager->getUidForCasUsername($input_string);
       if ($cas_uid) {
+        // Set target_id for reference.
         $values[$key] = $cas_uid;
         continue;
       }
 
-      // Check for user in Solr.
+      // Check if user exists in Solr.
       $solr_acct = asu_userpicker_get_solr_profile_record($input_string);
       if ($solr_acct) {
 
-        // Create user via CAS.
+        // Create user via cas.user_manager service.
         $cas_user_manager = \Drupal::service('cas.user_manager');
         $property_values['mail'] = $solr_acct['emailAddress'];
-        // @todo Include other field mappings when we add that in.
-        // pass and name are handled for us.
+        // @todo Include other field mappings when we add those into UI.
+        // pass and name are handled for us by the manager.
         $new_acct = $cas_user_manager->register($input_string, $property_values);
 
-        // Lineup new user's target_id.
+        // Lineup new user's target_id for the reference.
         $values[$key] = $new_acct->id();
       }
-
-      dpm($target_id);
-
-
-      //$values[$key] = $target_id;
-
-
-      // @todo compare with original validaiton function in .module
-
-      // @todo do autocreate here, ourselves? (based on setting?)
-      // 1. check if user exists locally
-        // if yes, set target_id.
-      // 2. check if user exists in solr
-      // 3. create user based on solr values with CAS tie-ins
-      // 4. set form value(s) to target id (uid).
-
 
     }
     return $values;
