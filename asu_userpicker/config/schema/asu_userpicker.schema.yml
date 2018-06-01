@@ -4,8 +4,6 @@ asu_userpicker.settings:
   mapping:
     asu_userpicker_solr_query_url:
       type: string
-    #asu_userpicker_referenceables_view:
-      #type: string
     asu_userpicker_referenceable_roles:
       type: mapping
     asu_userpicker_search_blocked_status:

@@ -3,6 +3,3 @@ asu_userpicker.admin_settings:
   title: 'ASU Userpicker settings'
   description: 'Configure ASU Userpicker settings'
   parent: user.admin_index
-#asu_userpicker.autocomplete:
-#  route_name: asu_userpicker.autocomplete
-#  weight: 1

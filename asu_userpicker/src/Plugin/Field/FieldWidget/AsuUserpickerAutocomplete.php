@@ -11,7 +11,6 @@ use Drupal\Core\Field\Plugin\Field\FieldWidget\EntityReferenceAutocompleteWidget
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\user\Entity\Role;
 use Drupal\user\Entity\User;
-//use Drupal\views\Views;
 
 /**
  * Plugin implementation of the "asu_userpicker_autocomplete" widget.
@@ -32,25 +31,16 @@ use Drupal\user\Entity\User;
 class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
 
   /**
-   * @FIXME
-   * Move all logic relating to the asu_userpicker_autocomplete widget into this class.
-   * For more information, see:
-   *
-   * https://www.drupal.org/node/1796000
-   * https://api.drupal.org/api/drupal/core%21lib%21Drupal%21Core%21Field%21WidgetInterface.php/interface/WidgetInterface/8
-   * https://api.drupal.org/api/drupal/core%21lib%21Drupal%21Core%21Field%21WidgetBase.php/class/WidgetBase/8
-   */
-
-  /**
    * {@inheritdoc}
    */
   public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) {
 
-    // @todo this line brings in the parent method... but we've copied in and
-    // are altering that code below.
+    // This line brings in the parent method... but we've copied in and
+    // are altering that code below, instead.
     //$element = parent::formElement($items, $delta, $element, $form, $form_state);
 
-    // ref: https://api.drupal.org/api/drupal/core%21modules%21link%21src%21Plugin%21Field%21FieldWidget%21LinkWidget.php/function/LinkWidget%3A%3AformElement/8.2.x
+    // Example referenced during creation of this method:
+    // https://api.drupal.org/api/drupal/core%21modules%21link%21src%21Plugin%21Field%21FieldWidget%21LinkWidget.php/function/LinkWidget%3A%3AformElement/8.2.x
 
     $entity = $items->getEntity();
     $referenced_entities = $items->referencedEntities();
@@ -127,8 +117,6 @@ class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
       // assign a default value of 60
       'asu_userpicker_solr_query_url' => \Drupal::config('asu_userpicker.settings')
         ->get('asu_userpicker_solr_query_url'),
-      // Taking the Views selector out. Currently not supporting that.
-      //'asu_userpicker_referenceables_view' => \Drupal::config('asu_userpicker.settings')->get('asu_userpicker_referenceables_view'),
       'asu_userpicker_label' => \Drupal::config('asu_userpicker.settings')
         ->get('asu_userpicker_label'),
       'asu_userpicker_referenceable_roles' => \Drupal::config('asu_userpicker.settings')
@@ -149,17 +137,6 @@ class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
       '#default_value' => $this->getSetting('asu_userpicker_solr_query_url'),
       '#required' => TRUE,
     ];
-
-    // @todo Filter for user based views?
-    //$views_options = [0 => $this->t('None')] + Views::getViewsAsOptions($views_only = TRUE, $filter = 'all', $exclude_view = NULL, $optgroup = FALSE, $sort = FALSE);
-    //$element['asu_userpicker_referenceables_view'] = [
-    //  '#type' => 'select',
-    //  '#title' => t('Search users using a view'),
-    //  '#default_value' => $this->getSetting('asu_userpicker_referenceables_view'),
-    //  '#options' => $views_options,
-    //  '#required' => FALSE,
-    //  '#description' => $this->t('Must be a user-based view.'),
-    //];
 
     $role_objects = Role::loadMultiple();
     $system_roles = array_combine(array_keys($role_objects), array_map(function ($a) {
@@ -193,7 +170,6 @@ class AsuUserpickerAutocomplete extends EntityReferenceAutocompleteWidget {
     $summary = [];
 
     $summary[] = t('Solr Url: @url', array('@url' => $this->getSetting('asu_userpicker_solr_query_url')));
-    //$summary[] = t('View: @view', array('@view' => $this->getSetting('asu_userpicker_referenceables_view')));
     $summary[] = t('Referenceable roles: @roles', array('@roles' => implode(',', array_filter($this->getSetting('asu_userpicker_referenceable_roles')))));
     $summary[] = t('Referenceable status: @statuses', array('@statuses' => implode(', ', array_filter($this->getSetting('asu_userpicker_referenceable_status')))));
 
